@@ -71,8 +71,8 @@ assets/data/*.json  ──(HttpClient GET)──►  In-memory cache  ──► 
 
 | Field | Value |
 |---|---|
-| Email | `abdokhaled156@gmail.com` |
-| Password | `9874123` |
+| Email | `me@gmail.com` |
+| Password | `megmail` |
 
 To add a new user, add an entry to `src/assets/data/users.json`:
 
