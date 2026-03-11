@@ -1,0 +1,44 @@
+[
+  {
+    "id": "category_1",
+    "name": "Food",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_2",
+    "name": "Rent",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_3",
+    "name": "Utilities",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_4",
+    "name": "Transportation",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_5",
+    "name": "Entertainment",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_6",
+    "name": "Health",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "category_7",
+    "name": "Shopping",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  }
+]

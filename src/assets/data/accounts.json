@@ -1,0 +1,20 @@
+[
+  {
+    "id": "account_1",
+    "name": "Checking",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "account_2",
+    "name": "Savings",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  },
+  {
+    "id": "account_3",
+    "name": "Credit Card",
+    "userId": "abdo_khaled_user",
+    "plaidId": null
+  }
+]
