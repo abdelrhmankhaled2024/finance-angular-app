@@ -20,7 +20,11 @@ interface UserRecord {
   imageUrl: string;
 }
 
-// localStorage is used ONLY for the session token (who is logged in)
+export interface AuthResult {
+  ok: boolean;
+  error?: string;
+}
+
 const TOKEN_KEY = 'fin_auth_token';
 
 @Injectable({ providedIn: 'root' })
@@ -34,7 +38,6 @@ export class AuthService {
 
   private usersCache: UserRecord[] = [];
 
-  /** Load users.json once, restore session from token in localStorage */
   async initClerk() {
     try {
       this.usersCache = await firstValueFrom(
@@ -42,7 +45,6 @@ export class AuthService {
       );
     } catch { this.usersCache = []; }
 
-    // Restore session: token in localStorage holds the userId
     const userId = localStorage.getItem(TOKEN_KEY);
     if (userId) {
       const found = this.usersCache.find(u => u.id === userId);
@@ -60,17 +62,46 @@ export class AuthService {
     return this.isSignedIn() ? localStorage.getItem(TOKEN_KEY) : null;
   }
 
-  /** Sign in: validates against users.json, stores userId token in localStorage */
-  signIn(email: string, password: string): boolean {
-    if (!email || !password) return false;
+  signIn(email: string, password: string): AuthResult {
+    if (!email || !password)
+      return { ok: false, error: 'Email and password are required.' };
+
     const found = this.usersCache.find(
       u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
-    if (!found) return false;
-    localStorage.setItem(TOKEN_KEY, found.id);   // token only — no user data
+    if (!found)
+      return { ok: false, error: 'Invalid email or password.' };
+
+    localStorage.setItem(TOKEN_KEY, found.id);
     this.user.set(this.toLocalUser(found));
     this.isSignedIn.set(true);
-    return true;
+    return { ok: true };
+  }
+
+  signUp(email: string, password: string, firstName = '', lastName = ''): AuthResult {
+    if (!email || !password)
+      return { ok: false, error: 'Email and password are required.' };
+
+    const exists = this.usersCache.find(
+      u => u.email.toLowerCase() === email.toLowerCase()
+    );
+    if (exists)
+      return { ok: false, error: 'An account with this email already exists.' };
+
+    const newUser: UserRecord = {
+      id:        'user_' + Date.now().toString(36),
+      firstName: firstName || email.split('@')[0],
+      lastName,
+      email,
+      password,
+      imageUrl:  '',
+    };
+
+    this.usersCache = [...this.usersCache, newUser];
+    localStorage.setItem(TOKEN_KEY, newUser.id);
+    this.user.set(this.toLocalUser(newUser));
+    this.isSignedIn.set(true);
+    return { ok: true };
   }
 
   signOut() {
@@ -84,11 +115,11 @@ export class AuthService {
 
   private toLocalUser(u: UserRecord): LocalUser {
     return {
-      id: u.id,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      emailAddresses: [{ emailAddress: u.email }],
-      imageUrl: u.imageUrl,
+      id:              u.id,
+      firstName:       u.firstName,
+      lastName:        u.lastName,
+      emailAddresses:  [{ emailAddress: u.email }],
+      imageUrl:        u.imageUrl,
     };
   }
 }

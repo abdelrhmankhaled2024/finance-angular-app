@@ -79,7 +79,7 @@ export class SignInComponent implements OnInit {
     this.errorMsg.set('');
 
     const { email, password } = this.form.value;
-    const result = await this.auth.signIn(email!, password!);
+    const result = this.auth.signIn(email!, password!);
 
     if (result.ok) {
       this.router.navigate(['/']);

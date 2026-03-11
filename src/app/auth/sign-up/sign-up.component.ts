@@ -22,18 +22,6 @@ import { AuthService } from '../../core/services/auth.service';
                 {{ errorMsg() }}
               </div>
             }
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">First Name</label>
-                <input formControlName="firstName" type="text" placeholder="John"
-                  class="w-full px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div class="space-y-1">
-                <label class="block text-sm font-medium text-gray-700">Last Name</label>
-                <input formControlName="lastName" type="text" placeholder="Doe"
-                  class="w-full px-4 py-3 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-            </div>
             <div class="space-y-1">
               <label class="block text-sm font-medium text-gray-700">Email</label>
               <input formControlName="email" type="email" placeholder="you@example.com"
@@ -74,10 +62,8 @@ export class SignUpComponent implements OnInit {
   isLoading = signal(false);
 
   form = this.fb.group({
-    firstName: [''],
-    lastName:  [''],
-    email:     ['', [Validators.required, Validators.email]],
-    password:  ['', [Validators.required, Validators.minLength(4)]],
+    email:    ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(4)]],
   });
 
   ngOnInit() {
@@ -89,13 +75,13 @@ export class SignUpComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMsg.set('');
 
-    const { email, password, firstName, lastName } = this.form.value;
-    const result = await this.auth.signUp(email!, password!, firstName ?? '', lastName ?? '');
+    const { email, password } = this.form.value;
+    const result = this.auth.signUp(email!, password!);
 
     if (result.ok) {
       this.router.navigate(['/']);
     } else {
-      this.errorMsg.set(result.error ?? 'Could not create account.');
+      this.errorMsg.set(result.error ?? 'Could not create account. Please try again.');
     }
     this.isLoading.set(false);
   }
