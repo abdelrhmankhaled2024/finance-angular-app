@@ -7,12 +7,12 @@ A fully offline **Angular 21** personal finance dashboard. No backend, no databa
 ## ✨ Features
 
 - 🔐 Sign in / Sign up with credential validation against `users.json`
-- 📊 Dashboard with Remaining / Income / Expenses summary cards
-- 📈 Interactive Chart.js charts — Area, Line, Bar, Pie, Doughnut, Radar (all free)
-- 🔄 Live filter updates by date range and account — no page reload needed
+- 📊 Dashboard with Remaining / Income / Expenses summary cards — shows all-time data by default
+- 📈 Interactive Chart.js charts — Area chart and Spending Pie
 - 💳 Full CRUD for Accounts, Categories, and Transactions
-- 📥 CSV bulk import for transactions
+- 📥 CSV bulk import for transactions (native FileReader, format: `date,payee,amount`)
 - 🗂️ All data reads and writes driven by JSON files (single source of truth)
+- 🔒 Auth guard waits for session restore before routing — no redirect on page refresh
 - 🌐 Works 100% offline after first load
 
 ---
@@ -42,7 +42,7 @@ src/
         ├── users.json         # Registered users & credentials
         ├── accounts.json      # Bank accounts seed data
         ├── categories.json    # Spending categories seed data
-        └── transactions.json  # Transactions seed data (130 rows / 60 days)
+        └── transactions.json  # Transactions seed data (all rows shown, no date filter by default)
 ```
 
 ---
@@ -93,13 +93,13 @@ To add a new user, add an entry to `src/assets/data/users.json`:
 
 | Layer | Technology |
 |---|---|
-| Framework | Angular 21 — Standalone Components |
-| Styling | Tailwind CSS 3 |
+| Framework | Angular 21 — Standalone Components, Signals |
+| Styling | Tailwind CSS 3, clsx, tailwind-merge |
 | Charts | Chart.js 4 |
 | Date handling | date-fns 3 |
-| CSV import | ngx-papaparse |
-| Icons | lucide-angular |
-| Data storage | JSON files + in-memory cache |
+| CSV import | Native `FileReader` API |
+| Icons | Inline SVG |
+| Data storage | JSON files + in-memory signal cache |
 
 ---
 
@@ -163,7 +163,7 @@ The `src/assets/data/` folder must always be tracked in git — these JSON files
 - `users.json` — authentication source
 - `accounts.json` — accounts seed
 - `categories.json` — categories seed
-- `transactions.json` — transactions seed (130 rows covering 60 days)
+- `transactions.json` — transactions seed data (loaded in full, no date filter applied by default)
 
 ---
 
