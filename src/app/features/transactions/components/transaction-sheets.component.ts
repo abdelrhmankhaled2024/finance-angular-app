@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { TransactionFormComponent } from './transaction-form.component';
@@ -16,8 +16,8 @@ import { CategoriesService } from '../../categories/services/categories.service'
       description="Add a new transaction." (closed)="sheetService.closeNew()">
       <app-transaction-form
         [disabled]="txService.isPending()"
-        [accountOptions]="accountOptions"
-        [categoryOptions]="categoryOptions"
+        [accountOptions]="accountOptions()"
+        [categoryOptions]="categoryOptions()"
         (submitted)="onCreate($event)"
         (createAccountRequest)="onCreateAccount($event)"
         (createCategoryRequest)="onCreateCategory($event)"
@@ -31,8 +31,8 @@ import { CategoriesService } from '../../categories/services/categories.service'
           [id]="sheetService.editId()"
           [defaultValues]="editDefaults"
           [disabled]="txService.isPending()"
-          [accountOptions]="accountOptions"
-          [categoryOptions]="categoryOptions"
+          [accountOptions]="accountOptions()"
+          [categoryOptions]="categoryOptions()"
           (submitted)="onEdit($event)"
           (deleted)="onDelete()"
           (createAccountRequest)="onCreateAccount($event)"
@@ -48,18 +48,16 @@ export class TransactionSheetsComponent implements OnInit {
   accountsService   = inject(AccountsService);
   categoriesService = inject(CategoriesService);
 
-  accountOptions:  { label: string; value: string }[] = [];
-  categoryOptions: { label: string; value: string }[] = [];
+  accountOptions  = computed(() => this.accountsService.accounts().map(a => ({ label: a.name, value: a.id })));
+  categoryOptions = computed(() => this.categoriesService.categories().map(c => ({ label: c.name, value: c.id })));
   editDefaults: any = null;
 
   ngOnInit() {
     this.accountsService.loadAll();
     this.categoriesService.loadAll();
-    this.refreshOptions();
   }
 
   ngDoCheck() {
-    this.refreshOptions();
     if (this.sheetService.isEditOpen() && this.sheetService.editId() && !this.editDefaults) {
       const t = this.txService.getOne(this.sheetService.editId()!);
       if (t) {
@@ -74,11 +72,6 @@ export class TransactionSheetsComponent implements OnInit {
       }
     }
     if (!this.sheetService.isEditOpen()) this.editDefaults = null;
-  }
-
-  private refreshOptions() {
-    this.accountOptions  = this.accountsService.accounts().map(a => ({ label: a.name, value: a.id }));
-    this.categoryOptions = this.categoriesService.categories().map(c => ({ label: c.name, value: c.id }));
   }
 
   onCreate(values: any) {
@@ -102,12 +95,10 @@ export class TransactionSheetsComponent implements OnInit {
 
   onCreateAccount(name: string) {
     this.accountsService.create({ name });
-    this.refreshOptions();
   }
 
   onCreateCategory(name: string) {
     this.categoriesService.create({ name });
-    this.refreshOptions();
   }
 
   onCloseEdit() { this.editDefaults = null; this.sheetService.closeEdit(); }

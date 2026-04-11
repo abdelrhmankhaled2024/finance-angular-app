@@ -116,6 +116,7 @@ export class FinanceDataService {
   private _accounts:     Account[]     = [];
   private _categories:   Category[]    = [];
   private _transactions: Transaction[] = [];
+  private _txFilters: { from?: string; to?: string; accountId?: string } = {};
 
   // ── INIT ───────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,7 @@ export class FinanceDataService {
   }
   private setTransactions(data: Transaction[]) {
     this._transactions = data;
-    this.transactions.set([...data]);
+    this.transactions.set(this.applyTxFilters(data));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -270,26 +271,33 @@ export class FinanceDataService {
   // TRANSACTIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  private applyTxFilters(data: Transaction[]): Transaction[] {
+    const f = this._txFilters;
+    let filtered = data;
+
+    if (f.accountId) filtered = filtered.filter(t => t.accountId === f.accountId);
+
+    if (f.from || f.to) {
+      const startDate = f.from ? new Date(f.from) : new Date(0);
+      const endDate   = f.to   ? new Date(f.to)   : new Date();
+      filtered = filtered.filter(t => {
+        const d = new Date(t.date);
+        return d >= startDate && d <= endDate;
+      });
+    }
+
+    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return filtered;
+  }
+
   loadTransactions(filters: { from?: string; to?: string; accountId?: string } = {}): void {
+    this._txFilters = filters;
     this.isLoadingTransactions.set(true);
 
     this.http.get<Transaction[]>('assets/data/transactions.json').subscribe({
       next: data => {
         this._transactions = data;
-        const defaultTo   = new Date();
-        const defaultFrom = subDays(defaultTo, 30);
-        const startDate   = filters.from ? new Date(filters.from) : defaultFrom;
-        const endDate     = filters.to   ? new Date(filters.to)   : defaultTo;
-
-        let filtered = data;
-        if (filters.accountId) filtered = filtered.filter(t => t.accountId === filters.accountId);
-        filtered = filtered.filter(t => {
-          const d = new Date(t.date);
-          return d >= startDate && d <= endDate;
-        });
-        filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        this.transactions.set(filtered);
+        this.transactions.set(this.applyTxFilters(data));
         this.isLoadingTransactions.set(false);
       },
       error: () => this.isLoadingTransactions.set(false),
@@ -381,21 +389,34 @@ export class FinanceDataService {
   loadSummary(filters: { from?: string; to?: string; accountId?: string } = {}): void {
     this.isLoadingSummary.set(true);
 
-    const defaultTo   = new Date();
-    const defaultFrom = subDays(defaultTo, 30);
-    const startDate   = filters.from ? new Date(filters.from) : defaultFrom;
-    const endDate     = filters.to   ? new Date(filters.to)   : defaultTo;
-    const periodLength    = differenceInDays(endDate, startDate) + 1;
-    const lastPeriodStart = subDays(startDate, periodLength);
-    const lastPeriodEnd   = subDays(endDate,   periodLength);
-
     // Use in-memory cache if already loaded, else fetch from JSON
     const compute = (allTxns: Transaction[]) => {
+      const scoped = filters.accountId
+        ? allTxns.filter(t => t.accountId === filters.accountId)
+        : allTxns;
+
+      // If no explicit date range, derive it from the actual data so nothing is hidden
+      let startDate: Date, endDate: Date;
+      if (filters.from || filters.to) {
+        const defaultTo   = new Date();
+        const defaultFrom = subDays(defaultTo, 30);
+        startDate = filters.from ? new Date(filters.from) : defaultFrom;
+        endDate   = filters.to   ? new Date(filters.to)   : defaultTo;
+      } else if (scoped.length > 0) {
+        const ms  = scoped.map(t => new Date(t.date).getTime());
+        startDate = new Date(Math.min(...ms));
+        endDate   = new Date(Math.max(...ms));
+      } else {
+        endDate   = new Date();
+        startDate = subDays(endDate, 30);
+      }
+
+      const periodLength    = differenceInDays(endDate, startDate) + 1;
+      const lastPeriodStart = subDays(startDate, periodLength);
+      const lastPeriodEnd   = subDays(endDate,   periodLength);
+
       const fetch = (start: Date, end: Date) => {
-        const f = allTxns.filter(t => {
-          const d = new Date(t.date);
-          return d >= start && d <= end && (!filters.accountId || t.accountId === filters.accountId);
-        });
+        const f = scoped.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
         return {
           income:    f.reduce((s,t) => s + (t.amount >= 0 ? t.amount : 0), 0),
           expenses:  f.reduce((s,t) => s + (t.amount  < 0 ? t.amount : 0), 0),
@@ -405,11 +426,9 @@ export class FinanceDataService {
       const current = fetch(startDate, endDate);
       const last    = fetch(lastPeriodStart, lastPeriodEnd);
 
-      const expenseTxns = allTxns.filter(t => {
+      const expenseTxns = scoped.filter(t => {
         const d = new Date(t.date);
-        return d >= startDate && d <= endDate
-          && (!filters.accountId || t.accountId === filters.accountId)
-          && t.amount < 0 && t.categoryId !== null;
+        return d >= startDate && d <= endDate && t.amount < 0 && t.categoryId !== null;
       });
       const catMap = new Map<string, number>();
       for (const t of expenseTxns) {
@@ -426,17 +445,14 @@ export class FinanceDataService {
         finalCats.push({ name: 'Other', value: other.reduce((s,c) => s + c.value, 0) });
 
       const dayMap = new Map<string, { income: number; expenses: number }>();
-      allTxns.filter(t => {
-        const d = new Date(t.date);
-        return d >= startDate && d <= endDate
-          && (!filters.accountId || t.accountId === filters.accountId);
-      }).forEach(t => {
-        const key = t.date.split('T')[0];
-        const cur = dayMap.get(key) ?? { income: 0, expenses: 0 };
-        if (t.amount >= 0) cur.income   += t.amount;
-        else               cur.expenses += Math.abs(t.amount);
-        dayMap.set(key, cur);
-      });
+      scoped.filter(t => { const d = new Date(t.date); return d >= startDate && d <= endDate; })
+        .forEach(t => {
+          const key = t.date.split('T')[0];
+          const cur = dayMap.get(key) ?? { income: 0, expenses: 0 };
+          if (t.amount >= 0) cur.income   += t.amount;
+          else               cur.expenses += Math.abs(t.amount);
+          dayMap.set(key, cur);
+        });
       const activeDays = [...dayMap.entries()]
         .sort(([a],[b]) => a.localeCompare(b))
         .map(([date,v]) => ({ date, ...v }));

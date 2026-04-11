@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TransactionsService, Transaction } from '../../features/transactions/services/transactions.service';
 import { TransactionSheetService } from '../../features/transactions/services/transaction-sheet.service';
+import { AccountsService } from '../../features/accounts/services/accounts.service';
 import { DataTableComponent, TableColumn } from '../../shared/components/data-table/data-table.component';
 import { format } from 'date-fns';
 
@@ -60,9 +61,10 @@ function formatCurrency(v: number) {
   `,
 })
 export class TransactionsComponent implements OnInit {
-  txService    = inject(TransactionsService);
-  sheetService = inject(TransactionSheetService);
-  private route = inject(ActivatedRoute);
+  txService       = inject(TransactionsService);
+  sheetService    = inject(TransactionSheetService);
+  accountsService = inject(AccountsService);
+  private route   = inject(ActivatedRoute);
 
   columns: TableColumn<Transaction>[] = [
     { key: 'date',         label: 'Date',     sortable: true, render: row => format(new Date(row.date), 'MMM dd, yyyy') },
@@ -92,8 +94,7 @@ export class TransactionsComponent implements OnInit {
       const text = e.target?.result as string;
       const lines = text.split('\n').filter(l => l.trim());
       if (lines.length < 2) return;
-      const accounts = JSON.parse(localStorage.getItem('fin_accounts') || '[]');
-      const defaultAcct = accounts[0];
+      const defaultAcct = this.accountsService.accounts()[0];
       if (!defaultAcct) return;
       const rows = lines.slice(1).map(line => {
         const [date, payee, amount] = line.split(',').map(s => s.trim().replace(/"/g,''));
